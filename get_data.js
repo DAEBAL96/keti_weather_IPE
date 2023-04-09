@@ -288,6 +288,7 @@ function Hour_interval() {
     else if(Number(nowtime) !== 0){
         nowtime = (String(Number(nowtime)-1)+"00").padStart(4, '0')
     }
+    
     console.log("req date = ",nowdate," time = ",nowtime)
 
     queryParams = '?' + encodeURIComponent('serviceKey') + '=W%2B5swTrRFZkh5iro7bK2%2F%2FkLeDmGw%2BRhqwQ3gGR73X0eBkL8yCH7Yz7Tf8RryPu6cQ2ngY0CQgbXurNryJtUVA%3D%3D'; /* Service Key*/
