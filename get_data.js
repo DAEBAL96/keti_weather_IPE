@@ -261,6 +261,13 @@ function timer_upload(period, cnt_idx) {
 /***************************************************************************************/
 var url = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst';
 var queryParams = ""
+// queryParams = '?' + encodeURIComponent('serviceKey') + '=W%2B5swTrRFZkh5iro7bK2%2F%2FkLeDmGw%2BRhqwQ3gGR73X0eBkL8yCH7Yz7Tf8RryPu6cQ2ngY0CQgbXurNryJtUVA%3D%3D'; /* Service Key*/
+// queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('999'); /* */
+// queryParams += '&' + encodeURIComponent('dataType') + '=' + encodeURIComponent('JSON'); /* */
+// queryParams += '&' + encodeURIComponent('base_date') + '=' + encodeURIComponent('20230409'); /* */
+// queryParams += '&' + encodeURIComponent('base_time') + '=' + encodeURIComponent('1000'); /* */
+// queryParams += '&' + encodeURIComponent('nx') + '=' + encodeURIComponent('63'); /* */
+// queryParams += '&' + encodeURIComponent('ny') + '=' + encodeURIComponent('123'); /* */
 
 function Hour_interval() {
     queryParams = ""
@@ -278,9 +285,10 @@ function Hour_interval() {
         nowdate = String(Number(nowdate)-1)
         nowtime = "2300"
     }
-    else{
-        nowtime = String(Number(nowtime)-1)+"00"
+    else if(Number(nowtime) !== 0){
+        nowtime = (String(Number(nowtime)-1)+"00").padStart(4, '0')
     }
+    console.log("req date = ",nowdate," time = ",nowtime)
 
     queryParams = '?' + encodeURIComponent('serviceKey') + '=W%2B5swTrRFZkh5iro7bK2%2F%2FkLeDmGw%2BRhqwQ3gGR73X0eBkL8yCH7Yz7Tf8RryPu6cQ2ngY0CQgbXurNryJtUVA%3D%3D'; /* Service Key*/
     queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('999'); /* */
