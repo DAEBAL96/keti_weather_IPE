@@ -264,33 +264,58 @@ var queryParams = ""
 // queryParams = '?' + encodeURIComponent('serviceKey') + '=W%2B5swTrRFZkh5iro7bK2%2F%2FkLeDmGw%2BRhqwQ3gGR73X0eBkL8yCH7Yz7Tf8RryPu6cQ2ngY0CQgbXurNryJtUVA%3D%3D'; /* Service Key*/
 // queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('999'); /* */
 // queryParams += '&' + encodeURIComponent('dataType') + '=' + encodeURIComponent('JSON'); /* */
-// queryParams += '&' + encodeURIComponent('base_date') + '=' + encodeURIComponent('20230409'); /* */
+// queryParams += '&' + encodeURIComponent('base_date') + '=' + encodeURIComponent('20230425'); /* */
 // queryParams += '&' + encodeURIComponent('base_time') + '=' + encodeURIComponent('1000'); /* */
 // queryParams += '&' + encodeURIComponent('nx') + '=' + encodeURIComponent('63'); /* */
 // queryParams += '&' + encodeURIComponent('ny') + '=' + encodeURIComponent('123'); /* */
-
+// var cin_nowtime = "2023042510"
 function Hour_interval() {
+    try{
+        queryParams = ""
+        let offset = 1000 * 60 * 60 * 9
+        let now = new Date((new Date()).getTime() + offset)  // 현재 시간
+        console.log("now : ", now)
+        let nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0, 0); // 1시간 뒤
+        console.log("nexH : ", nextHour)
+        let nowString = nextHour.toISOString();   // 만약 다시 펑션 돌아도 now가 키핑되면 now값을 불러와서 긁고
+        nowString = nowString.replace(/T/g,'').replace(/-/g,'').replace(/:/g,'').substr(0, 12); // query로 yyyymmddhhmm 이 들어가므로 12자리
+        let nowdate = nowString.substr(0, 8);
+        let nowtime = nowString.substr(8, 2);
+        let cin_nowtime = nowString.substr(0, 10);
+        if(Number(nowtime) === 0){  // 다음 달로 넘어가는 경우 now와 nextHour의 날짜 차이가 1이 아닐 경우 설정 달이 바뀔 때 또한 적용 필요
+            nowdate = String(Number(nowdate)-1) // 현재는 다음 날로 넘어가는 경우의 처리밖에 존재하지 않는다.
+            nowtime = "2300"
+        }
+        else if(Number(nowtime) !== 0){
+            nowtime = (String(Number(nowtime)-1)+"00").padStart(4, '0')
+        }
+        
+        console.log("req date = ",nowdate," time = ",nowtime)
+        // 이 때 설정한 nowdate, noewtime이 delay가 지난 후 setTimeout에 의해 get_weather의 query data로 들어가니깐
+        // 1시간 뒤에 동작하는 request에는 nowdate, nowtime이 request 동작 기준 1시간 전의 데이터로 request가 날아가는 것
+        // 실시간 데이터는 해당 시간 40분 부터 data 제공하기에 (ex. 10시40분 이후부터 10시의 데이터를 제공) 이러한 처리가 필요
+        queryParams = '?' + encodeURIComponent('serviceKey') + '=W%2B5swTrRFZkh5iro7bK2%2F%2FkLeDmGw%2BRhqwQ3gGR73X0eBkL8yCH7Yz7Tf8RryPu6cQ2ngY0CQgbXurNryJtUVA%3D%3D'; /* Service Key*/
+        queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('999'); /* */
+        queryParams += '&' + encodeURIComponent('dataType') + '=' + encodeURIComponent('JSON'); /* */
+        queryParams += '&' + encodeURIComponent('base_date') + '=' + encodeURIComponent(nowdate); /* */
+        queryParams += '&' + encodeURIComponent('base_time') + '=' + encodeURIComponent(nowtime); /* */
+        queryParams += '&' + encodeURIComponent('nx') + '=' + encodeURIComponent('63'); /* */
+        queryParams += '&' + encodeURIComponent('ny') + '=' + encodeURIComponent('123'); /* */
+        
+        let delay = nextHour - now;
+        console.log("delay : ", delay)
+        setTimeout(() => {          // 지정한 밀리 초 이후 코드 실행을 스케줄링 하는 데 사용 가능
+            console.log(`Running function at ${nextHour}`);
+            get_weather(queryParams, cin_nowtime);
+            Hour_interval();
+        }, delay);
+    } catch(err){
+        console.log("Hour_interval - Error >> ", err)
+    }
+}
+
+let make_query = (nowdate, nowtime) => {
     queryParams = ""
-    let offset = 1000 * 60 * 60 * 9
-    let now = new Date((new Date()).getTime() + offset)
-    console.log("now : ", now)
-    let nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0, 0);
-    console.log("nexH : ", nextHour)
-    let nowString = nextHour.toISOString();   // 만약 다시 펑션 돌아도 now가 키핑되면 now값을 불러와서 긁고
-    nowString = nowString.replace(/T/g,'').replace(/-/g,'').replace(/:/g,'').substr(0, 12);
-    let nowdate = nowString.substr(0, 8);
-    let nowtime = nowString.substr(8, 2);
-
-    if(Number(nowtime) === 0){  // 다음 달로 넘어가는 경우 now와 nextHour의 날짜 차이가 1이 아닐 경우 설정 달이 바뀔 때
-        nowdate = String(Number(nowdate)-1)
-        nowtime = "2300"
-    }
-    else if(Number(nowtime) !== 0){
-        nowtime = (String(Number(nowtime)-1)+"00").padStart(4, '0')
-    }
-    
-    console.log("req date = ",nowdate," time = ",nowtime)
-
     queryParams = '?' + encodeURIComponent('serviceKey') + '=W%2B5swTrRFZkh5iro7bK2%2F%2FkLeDmGw%2BRhqwQ3gGR73X0eBkL8yCH7Yz7Tf8RryPu6cQ2ngY0CQgbXurNryJtUVA%3D%3D'; /* Service Key*/
     queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('999'); /* */
     queryParams += '&' + encodeURIComponent('dataType') + '=' + encodeURIComponent('JSON'); /* */
@@ -299,48 +324,47 @@ function Hour_interval() {
     queryParams += '&' + encodeURIComponent('nx') + '=' + encodeURIComponent('63'); /* */
     queryParams += '&' + encodeURIComponent('ny') + '=' + encodeURIComponent('123'); /* */
 
-    let delay = nextHour - now;
-    console.log("delay : ", delay)
-    setTimeout(() => {          // 지정한 밀리 초 이후 코드 실행을 스케줄링 하는 데 사용 가능
-        console.log(`Running function at ${nextHour}`);
-        get_weather();
-        Hour_interval();
-    }, delay);
+    return queryParams
 }
 
-let get_weather = () => {       // oneM2M cin post =    
-    request({
-        url: url + queryParams,
-        method: 'GET'
-    }, function (error, response, body){
-        body=JSON.parse(body)
-        for(let i = 0; i < body["response"]["body"]["items"]["item"].length; i++){
-            let data_category = body["response"]["body"]["items"]["item"][i]["category"]
-            let data_value = body["response"]["body"]["items"]["item"][i]["obsrValue"]
-            let raw_date = (body["response"]["body"]["items"]["item"][i]["baseDate"]+body["response"]["body"]["items"]["item"][i]["baseTime"]).substr(0, 10)
-            let cin_obj = data_preprocessing(data_category, data_value, raw_date);
-            let rn = null
-            //  ["Precipitation","Temperature","Humidity","rainfall"]
-            if(data_category === "PTY"){
-                rn = "Precipitation"
+let get_weather = (queryParams, cin_nowtime) => {       // oneM2M cin post =    
+    try{
+        request({
+            url: url + queryParams,
+            method: 'GET'
+        }, function (error, response, body){
+            body=JSON.parse(body)
+            for(let i = 0; i < body["response"]["body"]["items"]["item"].length; i++){
+                let data_category = body["response"]["body"]["items"]["item"][i]["category"]
+                let data_value = body["response"]["body"]["items"]["item"][i]["obsrValue"]
+                // let raw_date = (body["response"]["body"]["items"]["item"][i]["baseDate"]+body["response"]["body"]["items"]["item"][i]["baseTime"]).substr(0, 10)
+                let raw_date = cin_nowtime
+                let cin_obj = data_preprocessing(data_category, data_value, raw_date);
+                let rn = null
+                //  ["Precipitation","Temperature","Humidity","rainfall"]
+                if(data_category === "PTY"){
+                    rn = "Precipitation"
+                }
+                else if(data_category === "REH"){
+                    rn = "Humidity"
+                }
+                else if(data_category === "RN1"){
+                    rn = "rainfall"
+                }
+                else if(data_category === "T1H"){
+                    rn = "Temperature"
+                }
+                var parent = "/Mobius/" + weather_ae + "/" + rn;
+                onem2m_client.create_z2m_cin(parent, cin_obj, function(rsc, res_body){
+                    console.log("response code = ", rsc)
+                    console.log(res_body)
+                    console.log(rn, " cin upload complete")
+                })
             }
-            else if(data_category === "REH"){
-                rn = "Humidity"
-            }
-            else if(data_category === "RN1"){
-                rn = "rainfall"
-            }
-            else if(data_category === "T1H"){
-                rn = "Temperature"
-            }
-            var parent = "/Mobius/" + weather_ae + "/" + rn;
-            onem2m_client.create_z2m_cin(parent, cin_obj, function(rsc, res_body){
-                console.log("response code = ", rsc)
-                console.log(res_body)
-                console.log(rn, " cin upload complete")
-            })
-        }
-    });
+        });
+    } catch(err){
+        console.log("get_weather - Error >> ", err)
+    }
 }
 
 let date_convert = (input_date) => {   //input_date format yyyymmddhh
@@ -383,5 +407,5 @@ let data_preprocessing = (type, value, raw_date) => {
     return cin_obj
 }
 
-// module.exports = get_weather();
+// module.exports = get_weather(queryParams, cin_nowtime);
 module.exports = Hour_interval();
