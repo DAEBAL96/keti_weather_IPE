@@ -2,6 +2,7 @@
 var Onem2mClient = require('./onem2m_client');
 var mqtt = require("mqtt");
 const request = require('request');
+const moment = require('moment');
 
 let weather_ae = "keti_weather"
 /* set device control conf */
@@ -255,20 +256,33 @@ function timer_upload(period, cnt_idx) {
     var content = JSON.stringify({value: 'TAS' + t_count++});
     setTimeout(timer_upload_action, period, cnt_idx, content, period);
 }
+let make_limit_time = (input_time) => { //"yyyymmddhh"
+    // moment.js를 사용하여 "yyyymmddhh" 형식의 문자열을 파싱
+    let dateObj = moment(input_time, 'YYYYMMDDHH');
 
+    // 27시간을 더한 새로운 날짜를 계산
+    let newDateObj = dateObj.add(27, 'hours');
+
+    // "yyyymmddhh" 형식의 문자열로 변환하여 출력
+    let newDateStr = newDateObj.format('YYYYMMDDHH');
+    
+    return newDateStr
+}
 
 /*********************************** request conf **************************************/
 /***************************************************************************************/
-var url = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst';
+let realtime_url = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst';
+let forecast_url = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst';
 var queryParams = ""
 // queryParams = '?' + encodeURIComponent('serviceKey') + '=W%2B5swTrRFZkh5iro7bK2%2F%2FkLeDmGw%2BRhqwQ3gGR73X0eBkL8yCH7Yz7Tf8RryPu6cQ2ngY0CQgbXurNryJtUVA%3D%3D'; /* Service Key*/
 // queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('999'); /* */
 // queryParams += '&' + encodeURIComponent('dataType') + '=' + encodeURIComponent('JSON'); /* */
-// queryParams += '&' + encodeURIComponent('base_date') + '=' + encodeURIComponent('20230425'); /* */
-// queryParams += '&' + encodeURIComponent('base_time') + '=' + encodeURIComponent('1000'); /* */
+// queryParams += '&' + encodeURIComponent('base_date') + '=' + encodeURIComponent('20230426'); /* */
+// queryParams += '&' + encodeURIComponent('base_time') + '=' + encodeURIComponent('1400'); /* */
 // queryParams += '&' + encodeURIComponent('nx') + '=' + encodeURIComponent('63'); /* */
 // queryParams += '&' + encodeURIComponent('ny') + '=' + encodeURIComponent('123'); /* */
-// var cin_nowtime = "2023042510"
+// var cin_nowtime = "2023042615"
+// let limit_time = make_limit_time(cin_nowtime)
 function Hour_interval() {
     try{
         queryParams = ""
@@ -280,22 +294,28 @@ function Hour_interval() {
         let nowString = nextHour.toISOString();   // 만약 다시 펑션 돌아도 now가 키핑되면 now값을 불러와서 긁고
         nowString = nowString.replace(/T/g,'').replace(/-/g,'').replace(/:/g,'').substr(0, 12); // query로 yyyymmddhhmm 이 들어가므로 12자리
         let nowdate = nowString.substr(0, 8);
-        let nowtime = nowString.substr(8, 2);
+        let nowtime = nowString.substr(8, 2);   // 최종적으로 nextHour 값을 query에 넣게되는건데 setTimeout이 도는 시간이
+                                                // nextHour를 측정한 시간으로부터 1시간 뒤므로 get data할 때는 그 시간이 now시간인 것
         let cin_nowtime = nowString.substr(0, 10);
+        let limit_time = make_limit_time(cin_nowtime)
+        let fsct_check_time = nowString.substr(8, 2);
         if(Number(nowtime) === 0){  // 다음 달로 넘어가는 경우 now와 nextHour의 날짜 차이가 1이 아닐 경우 설정 달이 바뀔 때 또한 적용 필요
             nowdate = String(Number(nowdate)-1) // 현재는 다음 날로 넘어가는 경우의 처리밖에 존재하지 않는다.
-            nowtime = "2300"
+            nowtime = "2300"                // nowtime을 진짜 현재시간으로 query에 넣어서 데이터 요청하게되면
+                                            // 초단기 실황은 API를 측정한 시간으로부터 40분 뒤부터하기 때문에 error 발생
+                                            // 이에 함수는 11시에 돌지만 query에 basetime으로는 10시껄 넣어서 측정 날씨라서
+                                            // 크게 오차없을거니깐 cin 및 data log로는 펑션이 도는 현재시간을 남기지만 측정 base time은 1시간 전을 넣어주는 것
         }
         else if(Number(nowtime) !== 0){
             nowtime = (String(Number(nowtime)-1)+"00").padStart(4, '0')
         }
         
         console.log("req date = ",nowdate," time = ",nowtime)
-        // 이 때 설정한 nowdate, noewtime이 delay가 지난 후 setTimeout에 의해 get_weather의 query data로 들어가니깐
+        // 이 때 설정한 nowdate, noewtime이 delay가 지난 후 setTimeout에 의해 get_realtime_weather의 query data로 들어가니깐
         // 1시간 뒤에 동작하는 request에는 nowdate, nowtime이 request 동작 기준 1시간 전의 데이터로 request가 날아가는 것
         // 실시간 데이터는 해당 시간 40분 부터 data 제공하기에 (ex. 10시40분 이후부터 10시의 데이터를 제공) 이러한 처리가 필요
         queryParams = '?' + encodeURIComponent('serviceKey') + '=W%2B5swTrRFZkh5iro7bK2%2F%2FkLeDmGw%2BRhqwQ3gGR73X0eBkL8yCH7Yz7Tf8RryPu6cQ2ngY0CQgbXurNryJtUVA%3D%3D'; /* Service Key*/
-        queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('999'); /* */
+        queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('400'); /* */
         queryParams += '&' + encodeURIComponent('dataType') + '=' + encodeURIComponent('JSON'); /* */
         queryParams += '&' + encodeURIComponent('base_date') + '=' + encodeURIComponent(nowdate); /* */
         queryParams += '&' + encodeURIComponent('base_time') + '=' + encodeURIComponent(nowtime); /* */
@@ -306,7 +326,10 @@ function Hour_interval() {
         console.log("delay : ", delay)
         setTimeout(() => {          // 지정한 밀리 초 이후 코드 실행을 스케줄링 하는 데 사용 가능
             console.log(`Running function at ${nextHour}`);
-            get_weather(queryParams, cin_nowtime);
+            get_realtime_weather(queryParams, cin_nowtime);
+            if((fsct_check_time==="03")||(fsct_check_time==="06")||(fsct_check_time==="09")||(fsct_check_time==="12")||(fsct_check_time==="15")||(fsct_check_time==="18")||(fsct_check_time==="21")||(fsct_check_time==="00")){
+                get_forecast_weather(queryParams, cin_nowtime, limit_time);
+            }
             Hour_interval();
         }, delay);
     } catch(err){
@@ -327,10 +350,10 @@ let make_query = (nowdate, nowtime) => {
     return queryParams
 }
 
-let get_weather = (queryParams, cin_nowtime) => {       // oneM2M cin post =    
+let get_realtime_weather = (queryParams, cin_nowtime) => {       // oneM2M cin post =    
     try{
         request({
-            url: url + queryParams,
+            url: realtime_url + queryParams,
             method: 'GET'
         }, function (error, response, body){
             body=JSON.parse(body)
@@ -354,16 +377,85 @@ let get_weather = (queryParams, cin_nowtime) => {       // oneM2M cin post =
                 else if(data_category === "T1H"){
                     rn = "Temperature"
                 }
-                var parent = "/Mobius/" + weather_ae + "/" + rn;
-                onem2m_client.create_z2m_cin(parent, cin_obj, function(rsc, res_body){
-                    console.log("response code = ", rsc)
-                    console.log(res_body)
-                    console.log(rn, " cin upload complete")
-                })
+                if(rn !== null){
+                    var parent = "/Mobius/" + weather_ae + "/" + rn;
+                    onem2m_client.create_z2m_cin(parent, cin_obj, function(rsc, res_body){
+                        console.log("response code = ", rsc)
+                        console.log(res_body)
+                        console.log(rn, " cin upload complete")
+                    })
+                }
             }
         });
     } catch(err){
-        console.log("get_weather - Error >> ", err)
+        console.log("get_realtime_weather - Error >> ", err)
+    }
+}
+
+let get_forecast_weather = (queryParams, cin_nowtime, limit_time) => {       // oneM2M cin post =    
+    let forecast_data = {
+        "Precipitation_forecast": {},
+        "Humidity_forecast": {},
+        "rainfall_forecast": {},
+        "Temperature_forecast": {}
+    }
+    let forecast_cnt_list = Object.keys(forecast_data)
+    try{
+        request({
+            url: forecast_url + queryParams,
+            method: 'GET'
+        }, function (error, response, body){
+            body=JSON.parse(body)
+            for(let i = 0; i < body["response"]["body"]["items"]["item"].length; i++){
+                let data_category = body["response"]["body"]["items"]["item"][i]["category"]
+                let data_value = body["response"]["body"]["items"]["item"][i]["fcstValue"]
+                let raw_date = (body["response"]["body"]["items"]["item"][i]["fcstDate"]+body["response"]["body"]["items"]["item"][i]["fcstTime"]).substr(0, 10)
+                if( (Number(cin_nowtime)<Number(raw_date)) && (Number(raw_date)<=Number(limit_time)) ){       // 어차피 cin_nowtime이 api 사용 가능한 3시간 주기마다 해당 함수가 시작되므로 ~보다 클 때는 필요없는 조건
+                    raw_date = date_convert(raw_date)
+                    // data_value 변경 작업도 필요
+                    if(data_category === "PTY"){
+                        if((data_value === "1")||(data_value === "2")||(data_value === "4")){
+                            data_value = "rain"
+                        }
+                        else if(data_value === "3"){
+                            data_value = "snow"
+                        }
+                        else if(data_value === "0"){
+                            data_value = "NoRain"
+                        }
+                        forecast_data["Precipitation_forecast"][raw_date] = data_value
+                    }
+                    else if(data_category === "REH"){
+                        forecast_data["Humidity_forecast"][raw_date] = data_value
+                    }
+                    else if(data_category === "PCP"){
+                        console.log("PCP parsing")
+                        if(data_value === '강수없음'){
+                            data_value = "0"
+                        }
+                        forecast_data["rainfall_forecast"][raw_date] = data_value
+                    }
+                    else if(data_category === "TMP"){
+                        forecast_data["Temperature_forecast"][raw_date] = data_value
+                    }
+                }
+            }
+            for(let i=0; i < forecast_cnt_list.length; i ++){
+                console.log(forecast_cnt_list[i], " for문 실행")
+                console.log(forecast_cnt_list[i], "obecjt 출력")
+                console.log(forecast_data[forecast_cnt_list[i]])
+                if(forecast_data[forecast_cnt_list[i]] != {}){
+                    forecast_data[forecast_cnt_list[i]]["current_time"] = date_convert(cin_nowtime)
+                    let rn = forecast_cnt_list[i];
+                    let parent = "/Mobius/" + weather_ae + "/" + rn;
+                    onem2m_client.create_z2m_cin(parent, forecast_data[forecast_cnt_list[i]], function(rsc, res_body){
+                        // console.log(parent, " cin upload res :", res_body)
+                    })
+                }
+            }
+        });
+    } catch(err){
+        console.log("get_forecast_weather - Error >> ", err)
     }
 }
 
@@ -407,5 +499,6 @@ let data_preprocessing = (type, value, raw_date) => {
     return cin_obj
 }
 
-// module.exports = get_weather(queryParams, cin_nowtime);
+// module.exports = get_realtime_weather(queryParams, cin_nowtime);
+// module.exports = get_forecast_weather(queryParams, cin_nowtime, limit_time)
 module.exports = Hour_interval();
