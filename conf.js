@@ -43,7 +43,7 @@ ae.port         = '9727';
 ae.bodytype     = 'json'; // select 'json' or 'xml' or 'cbor'
 ae.tasport      = '3105';
 
-let weather_cnt_list = ["Precipitation","Temperature","Humidity","rainfall", "Humidity_forecast", "Temperature_forecast", "Precipitation_forecast", "rainfall_forecast"]
+let weather_cnt_list = ["Precipitation","Temperature","Humidity","rainfall", "air_pollution", "Humidity_forecast", "Temperature_forecast", "Precipitation_forecast", "rainfall_forecast", "air_pollution_forecast"]
 
 // build cnt conf
 var cnt_count = 0;
