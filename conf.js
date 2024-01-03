@@ -24,7 +24,7 @@ conf.useprotocol = 'http'; // select one for 'http' or 'mqtt' or 'coap' or 'ws'
 conf.sim = 'disable'; // enable / disable
 
 // build cse
-cse.host        = '203.253.128.164';
+cse.host        = 'CSE_IP';
 cse.port        = '7579';
 cse.name        = 'Mobius';
 cse.id          = '/Mobius2';
